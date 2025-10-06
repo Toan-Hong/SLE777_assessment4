@@ -1,0 +1,508 @@
+---
+title: "**Assessment 4 - Part 2: Examining biological sequence diversity**"
+author: "**Toan Hong - s225602499**"
+date: "2025-10-05"
+output: 
+  html_document:
+    toc: yes
+    fig_width: 7
+    fig_height: 7
+theme: spacelab
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# **Introduction**
+
+Comparative genomic analysis provides valuable insights into the diversity, evolution, and functional adaptation of microorganisms. Examining the composition and organization of coding DNA sequences (CDS) allows researchers to understand how genome structure relates to gene expression and protein function. In this study, the genomic features of Saprospirales bacterium are compared with those of Escherichia coli, a well-characterized model organism.
+
+By analysing the number, length, and total content of coding sequences, as well as nucleotide, amino acid, and codon usage patterns, this investigation explores the molecular basis of variation between these two bacterial species. Further, the identification of over- and under-represented protein k-mers provides insight into sequence motifs that may reflect functional specialization or evolutionary constraints.
+
+Overall, this comparative approach highlights differences in genomic composition and codon usage bias that may relate to each organism’s ecological niche and evolutionary history, contributing to a broader understanding of bacterial sequence diversity.
+
+In this second part of the assessment 4, there are 6 big questions comparing many aspects of DNA and amino acid compositions between *Escherichia coli* and *Saprospirales bacterium*.
+
+# **Package Installation**
+
+The analyses in this report require five R packages as follows. The first step is to make sure they are installed in my account, using install.packages () commands.
+
+```{r}
+install.packages("seqinr")
+install.packages("R.utils")
+install.packages("readr")
+install.packages("dplyr")
+install.packages("ggplot2")
+```
+
+
+# **Load required libraries**
+
+```{r}
+suppressPackageStartupMessages({
+  library(seqinr) # is a package designed to process and analyse sequence data.
+  library(R.utils) # general utilities like zip and unzip
+  library(readr)  # for read_tsv and read_csv
+  library(dplyr)    # for data wrangling
+  library(ggplot2)  # for plotting
+})
+```
+
+# **Comparison of sequence features between *Escherichia coli* and *Saprospirales bacterium***
+
+## Question 1. Download the whole set of coding DNA sequences for *E. coli* (GCA_000005845) and *S. bacterium* (GCA_003448025). How many coding sequences are present in these organisms? Present this in the form of a table. Describe any differences between the two organisms. 
+
+The genomic data of E.coli (GCA_000005845) and S.bacterium (GCA_003448025) were downloaded from Ensembl database. Their URLs for compresses FASTA files were copied and downloaded using download.file command. These FASTA files containing all coding sequences were then decompressed using gunzip, and finally the files were listed in the current directory to confirm the successful download and extraction.
+
+```{r downloading E.coli and S.bacterium genomes}
+
+URL3="http://ftp.ensemblgenomes.org/pub/bacteria/release-53/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655_gca_000005845/cds/Escherichia_coli_str_k_12_substr_mg1655_gca_000005845.ASM584v2.cds.all.fa.gz"
+
+URL4="https://ftp.ensemblgenomes.ebi.ac.uk/pub/bacteria/release-62/fasta/bacteria_58_collection/saprospirales_bacterium_gca_003448025/cds/Saprospirales_bacterium_gca_003448025.ASM344802v1.cds.all.fa.gz"
+
+download.file(URL3,destfile="ecoli_cds.fa.gz")
+
+download.file(URL4,destfile="sbacterium_cds.fa.gz")
+
+gunzip("ecoli_cds.fa.gz")
+
+gunzip("sbacterium_cds.fa.gz")
+
+list.files()
+
+```
+
+The following code imports the uncompressed FASTA files (ecoli_cds.fa and sbacterium_cds.fa) into R using the read.fasta function from the seqinr package. By applying str(head(cds)), a structured summary of the first few sequences is displayed, allowing for a quick inspection of their organization, length, and content before proceeding with further analyses.
+
+```{r}
+
+ecoli_cds <- seqinr::read.fasta("ecoli_cds.fa") # Import the E. coli coding sequences (CDS) from a FASTA file and save as ecoli_cds
+
+str(head(ecoli_cds)) # Show the structure of the first 6 sequences to inspect content and format
+
+```
+
+```{r}
+
+sbacterium_cds <- seqinr::read.fasta("sbacterium_cds.fa") # Import the S. bacterium coding sequences (CDS) from a FASTA file and save as sbacterium_cds
+
+str(head(sbacterium_cds)) # Show the structure of the first 6 sequences to inspect content and format
+
+```
+
+
+## Question 2. How much coding DNA is there in total for these two organisms? Present this in the form of a table. Describe any differences between the two organisms.
+
+Now we can figure out the number of coding sequences using length() function
+
+```{r}
+
+length(ecoli_cds) 
+
+length(sbacterium_cds)
+
+```
+
+The summary(cds) function produces a comprehensive overview of the sequences, showing information such as their lengths, classes, and modes, while head restricts the display to only the first few entries.
+
+```{r}
+
+head(summary(ecoli_cds))
+
+head(summary(sbacterium_cds))
+
+```
+
+## Question 3. Calculate the length of all coding sequences in these two organisms. Make a boxplot of coding sequence length in these organisms. What is the mean and median coding sequence length of these two organisms? Describe any differences between the two organisms.
+
+Next, we calculate the total length of the sequences for E.coli. The code below obtains the lengths of genes from the cds object by converting the first column of the summary into numeric values, and then calculate sums, mean and median for the combined length of all genes. 
+
+```{r}
+
+ecoli_len <- as.numeric(summary(ecoli_cds)[,1])
+
+sum(ecoli_len)
+
+boxplot(ecoli_len,ylab="sequence length (bp)")
+
+```
+
+```{r}
+
+mean(ecoli_len)
+
+median(ecoli_len)
+
+```
+
+Similarly, we calculate sums, mean and median for the combined length of all genes of S.bacterium
+
+```{r}
+
+sbacterium_len <- as.numeric(summary(sbacterium_cds)[,1])
+
+sum(sbacterium_len)
+
+boxplot(sbacterium_len,ylab="sequence length (bp)")
+```
+
+
+```{r}
+
+mean(sbacterium_len)
+
+median(sbacterium_len)
+
+```
+
+## Question 4. Calculate the frequency of DNA bases in the total coding sequences for both organisms. Perform the same calculation for the total protein sequence. Create bar plots for nucleotide and amino acid frequency. Describe any differences between the two organisms.
+
+***DNA composition of the whole genome of E.coli***
+
+To analyze the nucleotide composition of a DNA sequence, we first unlist the cds object and store it in the variable ecoli_dna. We then calculate the frequency of each nucleotide using ecoli_dna_composition <- count(ecoli_dna, 1), which stores the results in ecoli_dna_composition. This data can be visualized with a bar plot using barplot(ecoli_dna_composition, xlab="nucleotides", ylab="frequency", main="E. coli CDS composition"). In the resulting plot, the x-axis represents the four nucleotides (A, C, G, T), the y-axis shows their frequencies, and the title indicates that it displays the nucleotide composition of E. coli coding sequences.
+
+```{r}
+
+ecoli_dna <- unlist(ecoli_cds)
+
+ecoli_dna_composition <- seqinr::count(ecoli_dna,1)
+
+barplot(ecoli_dna_composition,xlab="nucleotides",ylab="frequency", main="E coli CDS composition")
+
+grid()
+
+```
+
+To calculate the relative frequencies of nucleotides in a DNA sequence, we first count the occurrences of each nucleotide using ecoli_dna_composition <- count(dna, 1). We then convert these counts into relative frequencies by dividing each value by the total number of nucleotides (ecoli_dna_composition / sum(ecoli_dna_composition)). This produces proportions that represent the fraction of each nucleotide in the sequence, providing insight into the nucleotide distribution.
+
+```{r}
+
+ecoli_dna_proportion <- ecoli_dna_composition/sum(ecoli_dna_composition)
+
+barplot(ecoli_dna_proportion,xlab="nucleotides",ylab="proportion", main="E coli CDS composition")
+
+grid()
+
+```
+
+***DNA composition of the whole genome of S.bacterium***
+
+We then calculated the frequency of DNA bases in S.bacterium genome with similar codes above for E.coli
+
+```{r}
+
+sbacterium_dna <- unlist(sbacterium_cds)
+
+sbacterium_dna_composition <- seqinr::count(sbacterium_dna,1)
+
+barplot(sbacterium_dna_composition,xlab="nucleotides",ylab="frequency", main="S bacterium CDS composition")
+
+grid()
+
+```
+
+```{r}
+
+sbacterium_dna_proportion <- sbacterium_dna_composition/sum(sbacterium_dna_composition)
+
+barplot(sbacterium_dna_proportion,xlab="nucleotides",ylab="proportion", main="S bacterium CDS composition")
+
+grid()
+
+
+```
+
+***Amino acid composition of E.coli***
+
+
+The command lapply translates all the coding sequences into amino acid sequences and save them in ecoli_prot.
+
+```{r}
+
+ecoli_prot <- lapply(ecoli_cds, translate)
+
+```
+
+Calculate the frequency of amino acid in the total coding sequences for E.coli
+
+```{r}
+aa <- c("A", "R", "N", "D", "C", "Q", "E", "G", "H", "I", "L", "K", "M", "F", "P", "S", "T", "W", "Y", "V")
+
+ecoli_aa <- unlist(ecoli_prot)
+
+ecoli_aa_composition <- seqinr::count(ecoli_aa, wordsize = 1, alphabet = aa)
+
+barplot(ecoli_aa_composition,xlab="amino acid",ylab="frequency", main="E coli aa composition")
+
+grid()
+
+```
+
+```{r}
+ecoli_aa_proportion <- ecoli_aa_composition/sum(ecoli_aa_composition)
+
+barplot(ecoli_aa_proportion,xlab="nucleotides",ylab="proportion", main="E coli aa composition")
+
+grid()
+
+
+```
+
+
+***Amino acid composition of S.bacterium***
+
+Similar steps were implemented to analyse the amino acid composition of S.bacterium
+
+```{r}
+
+sbacterium_prot <- lapply(sbacterium_cds, translate)
+
+```
+
+Calculate the frequency of amino acid in the total coding sequences for S.bacterium
+
+```{r}
+aa <- c("A", "R", "N", "D", "C", "Q", "E", "G", "H", "I", "L", "K", "M", "F", "P", "S", "T", "W", "Y", "V")
+
+sbacterium_aa <- unlist(sbacterium_prot)
+
+sbacterium_aa_composition <- seqinr::count(sbacterium_aa, wordsize = 1, alphabet = aa)
+
+barplot(sbacterium_aa_composition,xlab="amino acid",ylab="frequency", main="E coli aa composition")
+
+grid()
+
+```
+
+```{r}
+sbacterium_aa_proportion <- sbacterium_aa_composition/sum(sbacterium_aa_composition)
+
+barplot(sbacterium_aa_proportion,xlab="nucleotides",ylab="proportion", main="S bacterium aa composition")
+
+grid()
+
+
+```
+
+## Question 5. Create a codon usage table and quantify the codon usage bias among all coding sequences. Describe any differences between the two organisms with respect to their codon usage bias. Provide charts to support your observations.
+
+***Codon usage table and bias among all coding sequences for E.coli***
+
+```{r}
+
+ecoli_cu <- uco(ecoli_dna,index="rscu",as.data.frame=TRUE)
+
+ecoli_cu 
+
+```
+
+```{r}
+
+ecoli_rscu <- ecoli_cu[, c("codon", "RSCU")]
+
+hist(ecoli_rscu$RSCU,
+     xlab = "RSCU",
+     ylab = "Frequency",
+     main = "Histogram of codon usage bias",
+     col = "skyblue",
+     breaks = 20)
+
+```
+
+
+***Codon usage table and bias among all coding sequences for S.bacterium***
+
+```{r}
+
+sbacterium_cu <- uco(sbacterium_dna,index="rscu",as.data.frame=TRUE)
+
+sbacterium_cu
+
+```
+
+```{r}
+
+sbacterium_rscu <- sbacterium_cu[, c("codon", "RSCU")]
+
+hist(sbacterium_rscu$RSCU,
+     xlab = "RSCU",
+     ylab = "Frequency",
+     main = "Histogram of codon usage bias",
+     col = "skyblue",
+     breaks = 20)
+
+```
+
+
+## Question 6. In the organism of interest, identify 10 protein sequence k-mers of length 3-5 which are the most over- and under-represented k-mers in your organism of interest. Are these k-mers also over- and under-represented in E. coli to a similar extent? Provide plots to support your observations. Why do you think these sequences are present at different levels in the genomes of these organisms?
+
+***k-mers analysis for E.coli***
+
+```{r}
+
+# --- Step 1: Count k-mers (k = 3, 4, 5) in E. coli ---
+
+freq3_ecoli <- seqinr::count(ecoli_aa, wordsize = 3, alphabet = aa, freq = TRUE)  # Count all 3-mer amino acid sequences
+freq4_ecoli <- seqinr::count(ecoli_aa, wordsize = 4, alphabet = aa, freq = TRUE)  # Count all 4-mer amino acid sequences
+freq5_ecoli <- seqinr::count(ecoli_aa, wordsize = 5, alphabet = aa, freq = TRUE)  # Count all 5-mer amino acid sequences
+
+# freq = TRUE means relative frequencies (each value = proportion of all k-mers)
+
+# --- Step 2: Function to extract top and bottom 10 frequent k-mers ---
+
+get_top_bottom_ecoli <- function(freq, k) {
+  df <- data.frame(
+    kmer = names(freq),          # Extract k-mer sequences (e.g. "AAA", "AAC", ...)
+    freq = as.numeric(freq)      # Get the numeric frequency of each k-mer
+  )
+  
+  # Top 10 most frequent (over-represented) k-mers
+  top10 <- df %>%
+    arrange(desc(freq)) %>%      # Sort descending by frequency
+    head(10) %>%                 # Select the first 10
+    mutate(Type = "Over-represented", k = k)  # Label them and record the k-mer length
+  
+  # Bottom 10 least frequent (under-represented) k-mers
+  bottom10 <- df %>%
+    arrange(freq) %>%            # Sort ascending by frequency
+    head(10) %>%                 # Select the first 10
+    mutate(Type = "Under-represented", k = k) # Label them and record the k-mer length
+  
+  # Combine both sets into one table
+  bind_rows(top10, bottom10)
+}
+
+# --- Step 3: Apply the function for k = 3, 4, and 5 ---
+ecoli_kmers <- bind_rows(
+  get_top_bottom_ecoli(freq3_ecoli, 3),   # Extract top/bottom 10 for 3-mers
+  get_top_bottom_ecoli(freq4_ecoli, 4),   # Extract top/bottom 10 for 4-mers
+  get_top_bottom_ecoli(freq5_ecoli, 5)    # Extract top/bottom 10 for 5-mers
+)
+
+# --- Step 4: Display the results ---
+head(ecoli_kmers, 10)  # Shows first 20 rows 
+
+```
+
+
+```{r}
+
+# Plot 1: Over-represented k-mers
+ggplot(
+  ecoli_kmers %>% filter(Type == "Over-represented"),
+  aes(x = reorder(kmer, freq), y = freq, fill = Type)
+) +
+  geom_col(show.legend = FALSE) +              # Bar plot, no legend (since one Type)
+  coord_flip() +                               # Flip axes for readability
+  facet_wrap(~k, scales = "free_y") +          # Separate panels for each k size
+  labs(
+    title = "Top 10 Over-represented Protein k-mers in E. coli",
+    x = "k-mer sequence",
+    y = "Relative frequency"
+  ) +
+ theme_minimal()
+
+
+   
+# Plot 2: Under-represented k-mers
+ggplot(
+  ecoli_kmers %>% filter(Type == "Under-represented"),
+  aes(x = reorder(kmer, freq), y = freq, fill = Type)
+) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  facet_wrap(~k, scales = "free_y") +
+  labs(
+    title = "Top 10 Under-represented Protein k-mers in E. coli",
+    x = "k-mer sequence",
+    y = "Relative frequency"
+  ) +
+  theme_minimal()
+
+```
+
+***k-mers analysis for S.bacterium***
+
+```{r}
+
+# --- Step 1: Count k-mers (k = 3, 4, 5) in Saprospirales bacterium ---
+
+freq3_sbacterium <- seqinr::count(sbacterium_aa, wordsize = 3, alphabet = aa, freq = TRUE)
+freq4_sbacterium <- seqinr::count(sbacterium_aa, wordsize = 4, alphabet = aa, freq = TRUE)
+freq5_sbacterium <- seqinr::count(sbacterium_aa, wordsize = 5, alphabet = aa, freq = TRUE)
+
+# --- Step 2: Function to extract top and bottom 10 frequent k-mers ---
+get_top_bottom <- function(freq, k) {
+  df <- data.frame(
+    kmer = names(freq),         # k-mer sequences
+    freq = as.numeric(freq)     # relative frequencies
+  )
+  
+  # Top 10 over-represented k-mers
+  top10 <- df %>%
+    arrange(desc(freq)) %>%
+    head(10) %>%
+    mutate(Type = "Over-represented", k = k)
+  
+  # Bottom 10 under-represented k-mers
+  bottom10 <- df %>%
+    arrange(freq) %>%
+    head(10) %>%
+    mutate(Type = "Under-represented", k = k)
+  
+  # Combine top and bottom
+  bind_rows(top10, bottom10)
+}
+
+# --- Step 3: Apply the function for k = 3, 4, 5 ---
+sbacterium_kmers <- bind_rows(
+  get_top_bottom(freq3_sbacterium, 3),
+  get_top_bottom(freq4_sbacterium, 4),
+  get_top_bottom(freq5_sbacterium, 5)
+)
+
+# --- Step 4: Display results ---
+# Top 10 over- and under-represented k-mers for each k
+sbacterium_kmers %>% filter(Type == "Over-represented") %>% head(10)
+sbacterium_kmers %>% filter(Type == "Under-represented") %>% head(10)
+
+```
+```{r}
+
+# --- Plot 1: Over-represented k-mers ---
+ggplot(
+  sbacterium_kmers %>% filter(Type == "Over-represented"),
+  aes(x = reorder(kmer, freq), y = freq, fill = Type)
+) +
+  geom_col(show.legend = FALSE) +              # Bar plot, no legend
+  coord_flip() +                               # Flip axes for readability
+  facet_wrap(~k, scales = "free_y") +         # Separate panels for each k size
+  labs(
+    title = "Top 10 Over-represented Protein k-mers in Saprospirales bacterium",
+    x = "k-mer sequence",
+    y = "Relative frequency"
+  ) +
+  theme_minimal()
+
+# --- Plot 2: Under-represented k-mers ---
+ggplot(
+  sbacterium_kmers %>% filter(Type == "Under-represented"),
+  aes(x = reorder(kmer, freq), y = freq, fill = Type)
+) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  facet_wrap(~k, scales = "free_y") +
+  labs(
+    title = "Top 10 Under-represented Protein k-mers in Saprospirales bacterium",
+    x = "k-mer sequence",
+    y = "Relative frequency"
+  ) +
+  theme_minimal()
+
+
+```
+
+
+
+
