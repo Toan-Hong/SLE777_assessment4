@@ -1,0 +1,223 @@
+---
+title: "**Assessment 4 - Part 1: Importing files, data wrangling, mathematical operations, plots and saving code on GitHub**"
+author: "**Toan Hong - s225602499**"
+date: "2025-10-05"
+output: 
+  html_document:
+    toc: yes
+    fig_width: 7
+    fig_height: 7
+theme: spacelab
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# **Introduction**
+
+This report presents the results for Part 1 of Assessment 4, which includes ten analytical tasks completed using RStudio and GitHub. Two data files — gene_expression.tsv and growth_data.csv — are provided and can be accessed from the following repository:
+
+🔗 https://github.com/ghazkha/Assessment4.git
+
+The file “gene_expression.tsv” contains RNA-seq count data for three samples of interest.
+
+  1.Read in the file, making the gene identifiers the row names. Show a table of values for the first six    genes.
+
+  2.Make a new column which is the mean of the other columns. Show a table of values for the first six       genes.
+
+  3.List the 10 genes with the highest mean expression.
+
+  4.Determine the number of genes with a mean <10.
+
+  5.Make a histogram plot of the mean values and include it into your report.
+
+The file “growth_data.csv” contains measurements for tree circumference growing at two sites, control site and treatment site which were planted 20 years ago.
+
+  6.Import this csv file into an R object. What are the column names?
+
+  7.Calculate the mean and standard deviation of tree circumference at the start and end of the study at     both sites.
+
+  8.Make a box plot of tree circumference at the start and end of the study at both sites.
+
+  9.Calculate the mean growth over the last 10 years at each site.
+
+  10.Use the t.test to estimate the p-value that the 10 year growth is different at the two sites.
+
+
+# **Package Installation**
+
+```{r}
+install.packages("seqinr")
+install.packages("R.utils")
+install.packages("readr")
+install.packages("dplyr")
+install.packages("ggplot2")
+```
+
+
+# **Load required libraries**
+
+```{r}
+suppressPackageStartupMessages({
+  library(seqinr) # is a package designed to process and analyse sequence data.
+  library(R.utils) # general utilities like zip and unzip
+  library(readr)    # for read_tsv and read_csv
+  library(dplyr)    # for data wrangling
+  library(ggplot2)  # for plotting
+})
+```
+
+# **Download the files**
+
+Go to the link https://github.com/ghazkha/Assessment4.git, then click on “view raw”, copy the URL from the address bar, use the download.file command in R as following
+
+```{r}
+URL1 = "https://raw.githubusercontent.com/ghazkha/Assessment4/refs/heads/main/gene_expression.tsv"
+URL2 = "https://raw.githubusercontent.com/ghazkha/Assessment4/refs/heads/main/growth_data.csv"
+
+download.file(URL1,destfile= "gene_expression.tsv")
+download.file(URL2, destfile = "growth_data.csv")
+```
+
+# **Gene expression analysis**
+
+## Question 1. Read in the file, making the gene identifiers the row names. Show a table of values for the first six genes.
+
+```{r}
+
+# Read the TSV file, making the first column (gene identifiers) as rownames
+gene_expression <- read_tsv("gene_expression.tsv")
+gene_expression <- as.data.frame(gene_expression)
+rownames(gene_expression) <- gene_expression[,1]
+gene_expression <- gene_expression[,-1]  # remove first column after setting rownames
+
+```
+
+
+```{r}
+
+head(gene_expression) # Show first 6 genes
+
+```
+
+## Question 2. Make a new column which is the mean of the other columns. Show a table of values for the first six genes
+
+```{r}
+
+gene_expression$mean_expr <- rowMeans(gene_expression) # create a new column for mean of other columns
+
+```
+
+
+```{r}
+
+head(gene_expression) # Show first 6 genes
+
+```
+
+## Question 3. List the 10 genes with the highest mean expression
+
+```{r}
+
+top10 <- head(gene_expression[order(-gene_expression$mean_expr), ], 10) # This line finds the top 10 genes with the highest mean expression values in your dataset and saves them into a new data frame called top10.
+
+top10
+
+```
+
+## Question 4. Determine the number of genes with a mean <10
+
+```{r}
+num_low <- sum(gene_expression$mean_expr < 10) # This line counts how many genes have a mean expression value less than 10, and saves that number into a variable called num_low
+
+num_low
+```
+
+## Question 5. Make a histogram plot of the mean values 
+
+```{r}
+
+# This creates a histogram showing the distribution of average gene expression levels (mean_expr) across all genes
+
+ggplot(gene_expression, aes(x = mean_expr)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Histogram of Mean Gene Expression",
+       x = "Mean expression", y = "Frequency")
+
+```
+
+# **Growth data analysis**
+
+## Question 6. Import this csv file into an R object. What are the column names?
+
+```{r}
+
+growth_data <- read_csv("growth_data.csv") # This line imports the CSV file named growth_data.csv into R and stores it as an R object (a data frame) called growth_data
+
+```
+
+```{r}
+
+colnames(growth_data) # show column names
+
+```
+
+## Question 7. Calculate the mean and standard deviation of tree circumference at the start and end of the study at both sites
+
+```{r}
+
+# Calculate mean and standard deviation for 2005
+mean_2005 <- mean(growth_data$Circumf_2005_cm, na.rm = TRUE)  # mean circumference in 2005, ignoring missing values
+sd_2005   <- sd(growth_data$Circumf_2005_cm, na.rm = TRUE)    # standard deviation in 2005, ignoring missing values
+
+# Calculate mean and standard deviation for 2020
+mean_2020 <- mean(growth_data$Circumf_2020_cm, na.rm = TRUE)  # mean circumference in 2020, ignoring missing values
+sd_2020   <- sd(growth_data$Circumf_2020_cm, na.rm = TRUE)    # standard deviation in 2020, ignoring missing values
+
+# Print results
+mean_2005; sd_2005  # display mean and SD for 2005
+mean_2020; sd_2020  # display mean and SD for 2020
+
+```
+
+## Question 8. Make a box plot of tree circumference at the start and end of the study at both sites.
+
+```{r}
+
+boxplot(growth_data$Circumf_2005_cm,
+        growth_data$Circumf_2020_cm,
+        names = c("2005", "2020"),
+        main = "Tree Circumference Growth",
+        ylab = "Circumference (cm)",
+        col = c("lightblue", "lightgreen"))
+
+```
+
+## Question 9. Calculate the mean growth over the last 10 years at each site.
+
+```{r}
+
+# Create a new column for growth between 2010 and 2020
+growth_data$Growth_2010_2020 <- growth_data$Circumf_2020_cm - growth_data$Circumf_2010_cm
+
+# Calculate mean growth by Site
+mean_growth_by_site <- aggregate(Growth_2010_2020 ~ Site, data = growth_data, FUN = mean)
+
+# Print results
+mean_growth_by_site
+
+```
+
+
+## Question 10. Use the t.test to estimate the p-value that the 10 year growth is different at the two sites.
+
+```{r}
+
+t_test_result <- t.test(Growth_2010_2020 ~ Site, data = growth_data) # This line performs a t-test to compare the mean growth between two groups defined by Site in your dataset and stores the result in the variable t_test_result
+
+t_test_result
+
+```
+
